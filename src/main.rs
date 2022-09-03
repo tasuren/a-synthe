@@ -310,7 +310,7 @@ fn main() {
         cloned_shared_data.adjustment_rate.store(
             value, Ordering::SeqCst
         ));
-    row_hbox.append(&ui, adjustment_rate, LayoutStrategy::Compact);
+    row_hbox.append(&ui, adjustment_rate, LayoutStrategy::Stretchy);
     row_hbox.append(&ui, Spacer::new(&ui), LayoutStrategy::Stretchy);
 
     // # MIDI出力を行うかのチェックボックス
