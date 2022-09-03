@@ -7,3 +7,15 @@ WindowsとMacに現在対応しています。
 
 ## Screenshot
 <img width="455" alt="screenshot" src="https://user-images.githubusercontent.com/45121209/188252781-38399117-1a78-47df-a8c3-d13ce02b35c0.png">
+
+## Build
+### Windows
+`cargo build --release`の実行できます。
+
+### Mac
+1. `cargo bundle --release`を実行します。
+2. 以下のコードをビルドされたappの`info.plist`の`dict`キー内に追記します。
+```plist
+<key>NSMicrophoneUsageDescription</key>
+<string>音程検出のための音声拾いのため。</string>
+```
