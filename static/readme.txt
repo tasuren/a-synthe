@@ -33,9 +33,12 @@ aSynthe.exe: 実行ファイル (本体)
 readme.txt: このファイル
 static/notes.csv: 音程の番号と周波数が書いてあるファイル
 static/main.ico: アイコン
+licenses-windows.html: 使用したライブラリのライセンスを書き込んだHTMLファイル
+
   ● Mac
 aSynthe.app: 実行ファイル (本体)
 readme.txt: このファイル
+licenses-mac.html: 使用したライブラリのライセンスを書き込んだHTMLファイル
 
 ◇ インストール ◇
   ● Windows
@@ -99,6 +102,15 @@ MIDI出力を使用可能な場合のみこのチェックボックスは有効�
 
 ◇ 転載 ◇
 しても良いですが、自作発言等はしてはいけません。
+
+◇ 謝辞 ◇
+様々なライブラリを使用してこのソフトは実装されました。
+使用したライブラリについては同梱ファイルの`licenses-*.html`に書き込まれています。
+また、そこに書き込んでいないものもあり、それは以下です。
+
+  ● libui
+著作権：Copyright (c) 2014 Pietro Gagliardi
+ライセンス：https://github.com/andlabs/libui/blob/master/LICENSE
 
 ----------
 ◇ 連絡先 ◇
