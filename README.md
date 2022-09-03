@@ -1,3 +1,4 @@
+![GitHub all releases](https://img.shields.io/github/downloads/tasuren/aSynthe/total) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/tasuren/aSynthe) [![Discord](https://img.shields.io/discord/777430548951728149?label=chat&logo=discord)](https://discord.gg/kfMwZUyGFG)
 # aSynthe
 これはマイクに入った音声から音程を検出するソフトです。  
 WindowsとMac(M1)に現在対応しています。
