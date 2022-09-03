@@ -233,7 +233,7 @@ fn main() {
         labels.push(Label::new(&ui, "_"));
         label_box.append(&ui, labels.last().unwrap().clone(), LayoutStrategy::Stretchy);
     };
-    label_box.append(&ui, Label::new(&ui, "　　　　　　　"), LayoutStrategy::Stretchy);
+    //label_box.append(&ui, Label::new(&ui, "　　　　　　　"), LayoutStrategy::Stretchy);
     group.set_child(&ui, label_box);
 
     hbox.append(&ui, group, LayoutStrategy::Stretchy);
@@ -267,7 +267,7 @@ fn main() {
             _button.set_text(&cloned_ui, DEFAULT_SILENT_BUTTON_TEXT);
         }
     );
-    row_hbox.append(&ui, silent_button, LayoutStrategy::Stretchy);
+    row_hbox.append(&ui, silent_button, LayoutStrategy::Compact);
 
     vbox.append(&ui, row_hbox, LayoutStrategy::Stretchy);
     vbox.append(&ui, Spacer::new(&ui), LayoutStrategy::Compact);
@@ -311,13 +311,13 @@ fn main() {
             value, Ordering::SeqCst
         ));
     row_hbox.append(&ui, adjustment_rate, LayoutStrategy::Stretchy);
-    row_hbox.append(&ui, Spacer::new(&ui), LayoutStrategy::Stretchy);
+    row_hbox.append(&ui, Label::new(&ui, "　"), LayoutStrategy::Compact);
 
     // # MIDI出力を行うかのチェックボックス
     let mut midi_output_check = Checkbox::new(&ui, "MIDI出力");
     if output.is_none() { midi_output_check.disable(&ui); };
     let cloned_midi_output_check = midi_output_check.clone();
-    row_hbox.append(&ui, midi_output_check, LayoutStrategy::Stretchy);
+    row_hbox.append(&ui, midi_output_check, LayoutStrategy::Compact);
     let mut before_midi_number = Some(0);
 
     vbox.append(&ui, row_hbox, LayoutStrategy::Stretchy);
