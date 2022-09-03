@@ -11,10 +11,8 @@
 【最終更新日】2022/09/03
 【ファイル名】
 	【Windows】aSynthe.exe
-    【Mac】aSynthe.app
-
-【 ウ ェ ブ 】https://tasuren.f5.si/
-【 メ ー ル 】tasuren@outlook.jp
+	【Mac】aSynthe.app
+【 ウ ェ ブ 】https://tasuren.f5.si/downloads/asynthe.html
 
 ---------- ----------
 ◇ 概要 ◇
