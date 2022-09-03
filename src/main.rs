@@ -230,7 +230,7 @@ fn main() {
     let mut label_box = VerticalBox::new(&ui);
     let mut labels = Vec::new();
     for _ in 0..RESULT_RANGE {
-        labels.push(Label::new(&ui, "_"));
+        labels.push(Label::new(&ui, "　　　　　　　"));
         label_box.append(&ui, labels.last().unwrap().clone(), LayoutStrategy::Stretchy);
     };
     group.set_child(&ui, label_box);
