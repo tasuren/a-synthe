@@ -233,7 +233,6 @@ fn main() {
         labels.push(Label::new(&ui, "_"));
         label_box.append(&ui, labels.last().unwrap().clone(), LayoutStrategy::Stretchy);
     };
-    //label_box.append(&ui, Label::new(&ui, "　　　　　　　"), LayoutStrategy::Stretchy);
     group.set_child(&ui, label_box);
 
     hbox.append(&ui, group, LayoutStrategy::Stretchy);
