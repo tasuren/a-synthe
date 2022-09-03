@@ -250,7 +250,7 @@ fn main() {
     let cloned_shared_data = shared_data.clone();
     use_window_check.on_toggled(&ui, move |value|
         cloned_shared_data.use_window_flag.store(value, Ordering::SeqCst));
-    row_hbox.append(&ui, use_window_check, LayoutStrategy::Compact);
+    row_hbox.append(&ui, use_window_check, LayoutStrategy::Stretchy);
     row_hbox.append(&ui, Label::new(&ui, "　"), LayoutStrategy::Compact);
 
     // # 無音データを設定するボタン
