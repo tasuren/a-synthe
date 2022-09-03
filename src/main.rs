@@ -302,7 +302,7 @@ fn main() {
     let mut row_hbox = HorizontalBox::new(&ui);
 
     // # 調整
-    vbox.append(&ui, Label::new(&ui, "音程調整"), LayoutStrategy::Stretchy);
+    vbox.append(&ui, Label::new(&ui, "音程調整"), LayoutStrategy::Compact);
     let mut adjustment_rate = Spinbox::new(&ui, -127, 127);
     adjustment_rate.set_value(&ui, 0);
     let cloned_shared_data = shared_data.clone();
