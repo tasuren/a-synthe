@@ -15,7 +15,7 @@ WindowsとMac(M1)に現在対応しています。
 
 ## Build
 ### Windows
-`cargo build --release`の実行できます。
+`cargo build --release`の実行でできます。
 
 ### Mac
 1. `cargo install cargo-bundle`を実行してcargo-bundleをインストールする。
