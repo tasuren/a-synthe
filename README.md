@@ -1,12 +1,15 @@
 # aSynthe
 これはマイクに入った音声から音程を検出するソフトです。  
-WindowsとMacに現在対応しています。
+WindowsとMac(M1)に現在対応しています。
 
 **WARNING**  
 まだ、モノラルのマイクしか対応していません。(めんどくさかった)
 
 ## Screenshot
-<img width="455" alt="screenshot" src="https://user-images.githubusercontent.com/45121209/188252781-38399117-1a78-47df-a8c3-d13ce02b35c0.png">
+<img width="455" alt="screenshot" src="https://user-images.githubusercontent.com/45121209/188258254-a734da9b-8597-4956-a373-c845ee48119a.png">
+
+## Downloads
+ソフトのダウンロードは[こちら](https://github.com/tasuren/aSynthe/releases)からできます。
 
 ## Build
 ### Windows
