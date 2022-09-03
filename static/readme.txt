@@ -32,7 +32,7 @@
 aSynthe.exe: 実行ファイル (本体)
 readme.txt: このファイル
 static/notes.csv: 音程の番号と周波数が書いてあるファイル
-static/asynthe.ico: アイコン
+static/main.ico: アイコン
   ● Mac
 aSynthe.app: 実行ファイル (本体)
 readme.txt: このファイル

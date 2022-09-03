@@ -2,6 +2,7 @@
  
 #![allow(non_snake_case)]
 
+#[cfg(target_os="macos")]
 use core_foundation::bundle::CFBundle;
 
 use rustfft::{ FftPlanner, num_complex::{ Complex, ComplexFloat } };
