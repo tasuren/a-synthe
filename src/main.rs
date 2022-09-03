@@ -178,7 +178,7 @@ fn main() {
     // MIDI出力の設定をする。
     let tentative = MidiOutput::new(APPLICATION_NAME).unwrap();
     let mut output;
-    if tentative.port_count() == 0 {
+    if tentative.ports().len() == 0 {
         output = None;
     } else {
         let port = &tentative.ports()[0];
