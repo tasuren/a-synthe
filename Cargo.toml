@@ -28,9 +28,9 @@ winres = "0.1.12"
 [package.metadata.bundle]
 name = "aSynthe"
 identifier = "xyz.tasuren.asynthe"
-icon = ["static/asynthe.png"]
+icon = ["static/main.png"]
 version = "0.1.0"
-resources = ["static/asynthe.png", "static/notes.csv"]
+resources = ["static/notes.csv"]
 copyright = "(c) tasuren 2022"
 category = "public.app-category.utilities"
 short_description = "音程を検出するためのソフトです。"
