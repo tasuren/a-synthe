@@ -6,7 +6,7 @@
 【 　作者　 】tasuren
 【 開発環境 】macOS
 【 開発言語 】Rust (rustc 1.62.1)
-【 動作環境 】Windows 10 / Mac (M1)
+【 動作環境 】Windows 10 64bit / Mac (M1)
 【バージョン】0.1.0
 【最終更新日】2022/09/03
 【ファイル名】
