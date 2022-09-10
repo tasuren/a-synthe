@@ -249,7 +249,7 @@ fn main() {
         .set_title("情報")
         .set_text(&format!(
             "aSynthe v{}\n(c) 2022 tasuren\n\nリポジトリ：https://github.com/tasuren/aSynthe\n{}",
-            env!("CARGO_PKG_VERSION"), "ライセンス情報：https://github.com/tasuren/aSynthe/blob/main/static/licenses.html"
+            env!("CARGO_PKG_VERSION"), "ライセンス情報：https://tasuren.github.io/aSynthe"
         ))
         .show_alert().unwrap());
     menu.append_separator();
@@ -290,7 +290,7 @@ fn main() {
     let cloned_shared_data = shared_data.clone();
     use_window_check.on_toggled(&ui, move |value|
         cloned_shared_data.use_window_flag.store(value, Ordering::SeqCst));
-    row_hbox.append(&ui, use_window_check, LayoutStrategy::Stretchy);
+    row_hbox.append(&ui, use_window_check, LayoutStrategy::Compact);
     row_hbox.append(&ui, Label::new(&ui, "　"), LayoutStrategy::Compact);
 
     // # 無音データを設定するボタン
@@ -346,7 +346,7 @@ fn main() {
             value, Ordering::SeqCst
         ));
     adjustment_rate_box.append(&ui, adjustment_rate, LayoutStrategy::Compact);
-    row_hbox.append(&ui, adjustment_rate_box, LayoutStrategy::Stretchy);
+    row_hbox.append(&ui, adjustment_rate_box, LayoutStrategy::Compact);
     row_hbox.append(&ui, Label::new(&ui, "　"), LayoutStrategy::Compact);
 
     // # MIDIの出力先の選択ボックス
@@ -356,10 +356,6 @@ fn main() {
     midi_output_select.append(&ui, "なし");
     let port_count = output.ports().len();
     // MIDIの出力先をコンボボックスに追加しておく。
-    for port in output.ports().iter() {
-        midi_output_select.append(&ui, &output.port_name(port)
-            .unwrap_or("不明な出力先".to_string()));
-    };
     // MidiManagerを用意する。
     let mut midi_manager = MidiManager::new(output);
     // MIDI出力先選択の設定を行う。
@@ -382,7 +378,7 @@ fn main() {
     row_hbox.append(&ui, midi_output_select_box, LayoutStrategy::Compact);
     let mut before_midi_number = Some(0);
 
-    vbox.append(&ui, row_hbox, LayoutStrategy::Stretchy);
+    vbox.append(&ui, row_hbox, LayoutStrategy::Compact);
 
     // 作ったボタン等をまとめる。
     hbox.append(&ui, vbox, LayoutStrategy::Compact);
