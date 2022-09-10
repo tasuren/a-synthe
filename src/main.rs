@@ -94,6 +94,7 @@ struct Synthe {
 }
 
 impl Synthe {
+    /// インスタンスを作ります。
     fn new(notes: Notes, tx: Sender<Option<Note>>, frame_rate: f32) -> Self {
         Self {
             notes: notes, tx: tx, frame_rate: frame_rate, silence: None,
@@ -107,6 +108,7 @@ impl Synthe {
         }
     }
 
+    /// 音程検出の処理を行います。
     fn process(&mut self, data: &[f32]) {
         // 音量を調べる。
         let volume = 20.0 * (data.iter().map(
@@ -176,6 +178,7 @@ struct MidiManager {
 }
 
 impl MidiManager {
+    /// インスタンスを作ります。
     fn new(output: MidiOutput) -> Self {
         Self {
             connection: if output.ports().len() > 0 {
@@ -209,6 +212,7 @@ impl MidiManager {
         };
         self
     }
+
     /// MIDIが使用可能かどうかを調べます。
     fn is_avaliable(&self) -> bool { self.connection.is_some() && self.port_index.get() > 0 }
 }
@@ -291,7 +295,7 @@ fn main() {
     use_window_check.on_toggled(&ui, move |value|
         cloned_shared_data.use_window_flag.store(value, Ordering::SeqCst));
     row_hbox.append(&ui, use_window_check, LayoutStrategy::Compact);
-    row_hbox.append(&ui, Label::new(&ui, "　"), LayoutStrategy::Compact);
+    row_hbox.append(&ui, Label::new(&ui, "　"), LayoutStrategy::Stretchy);
 
     // # 無音データを設定するボタン
     let mut silent_button = Button::new(&ui, DEFAULT_SILENT_BUTTON_TEXT);
@@ -347,7 +351,7 @@ fn main() {
         ));
     adjustment_rate_box.append(&ui, adjustment_rate, LayoutStrategy::Compact);
     row_hbox.append(&ui, adjustment_rate_box, LayoutStrategy::Compact);
-    row_hbox.append(&ui, Label::new(&ui, "　"), LayoutStrategy::Compact);
+    row_hbox.append(&ui, Label::new(&ui, "　"), LayoutStrategy::Stretchy);
 
     // # MIDIの出力先の選択ボックス
     let mut midi_output_select_box = VerticalBox::new(&ui);
@@ -356,6 +360,10 @@ fn main() {
     midi_output_select.append(&ui, "なし");
     let port_count = output.ports().len();
     // MIDIの出力先をコンボボックスに追加しておく。
+    for port in output.ports().iter() {
+        midi_output_select.append(&ui, &output.port_name(port)
+            .unwrap_or("不明な出力先".to_string()));
+    };
     // MidiManagerを用意する。
     let mut midi_manager = MidiManager::new(output);
     // MIDI出力先選択の設定を行う。
