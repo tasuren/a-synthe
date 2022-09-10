@@ -21,6 +21,7 @@ WindowsとMac(M1)に現在対応しています。
 1. `cargo install cargo-bundle`を実行してcargo-bundleをインストールする。
 2. `cargo bundle --release`を実行します。
 3. 以下のコードをビルドされたappの`info.plist`の`dict`キー内に追記します。
+
 ```xml
 <key>NSMicrophoneUsageDescription</key>
 <string>音程検出のための音声拾いのため。</string>

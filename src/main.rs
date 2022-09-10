@@ -11,7 +11,7 @@ use std::{
 
 use lazy_static::lazy_static;
 
-use midir::MidiOutput;
+use midir::{ MidiOutput, MidiOutputConnection };
 use cpal::{
     traits::{ HostTrait, DeviceTrait, StreamTrait },
     default_host
@@ -20,7 +20,7 @@ use cpal::{
 use iui::{
     menus::Menu, controls::{
         Button, Label, HorizontalBox, LayoutStrategy, Group,
-        Spinbox, Checkbox, VerticalBox, Spacer
+        Spinbox, Checkbox, VerticalBox, Combobox
     }, prelude::*
 };
 use native_dialog::{ MessageDialog, MessageType };
@@ -168,6 +168,52 @@ const VELOCITY: u8 = 0x64;
 const DEFAULT_SILENT_BUTTON_TEXT: &str = "無音データを設定する";
 
 
+/// MIDIを管理するための構造体です。
+struct MidiManager {
+    connection: Option<MidiOutputConnection>,
+    port_index: Rc<Cell<usize>>,
+    real_port_index: usize
+}
+
+impl MidiManager {
+    fn new(output: MidiOutput) -> Self {
+        Self {
+            connection: if output.ports().len() > 0 {
+                let port = &output.ports()[0];
+                Some(output.connect(port, APPLICATION_NAME).unwrap())
+            } else { None },
+            port_index: Rc::new(Cell::new(0)),
+            real_port_index: 0
+        }
+    }
+
+    /// MIDIのデータを送ります。
+    fn send_data(&mut self, key: u8, is_on: bool) {
+        self.connection.as_mut().unwrap().send(&[
+            if is_on { NOTE_ON_MSG }
+            else { NOTE_OFF_MSG },
+            key, VELOCITY
+        ]).unwrap();
+    }
+
+    /// MIDIの出力先の処理を行います。
+    fn set_midi_output(mut self) -> Self {
+        let port_index = self.port_index.get();
+        if self.real_port_index != port_index && port_index > 0 {
+            if let Some(connection) = self.connection {
+                let output = connection.close();
+                let port = &output.ports()[port_index - 1];
+                self.connection = Some(output.connect(port, APPLICATION_NAME).unwrap());
+                self.real_port_index = port_index;
+            };
+        };
+        self
+    }
+    /// MIDIが使用可能かどうかを調べます。
+    fn is_avaliable(&self) -> bool { self.connection.is_some() && self.port_index.get() > 0 }
+}
+
+
 /// メインプログラムです。
 fn main() {
     println!("{} by tasuren\nNow loading...", APPLICATION_NAME);
@@ -175,15 +221,8 @@ fn main() {
     // 別スレッドとの通信用のチャンネルを作る。
     let (tx, rx) = channel();
 
-    // MIDI出力の設定をする。
-    let tentative = MidiOutput::new(APPLICATION_NAME).unwrap();
-    let mut output;
-    if tentative.ports().len() == 0 {
-        output = None;
-    } else {
-        let port = &tentative.ports()[0];
-        output = Some(tentative.connect(port, APPLICATION_NAME).unwrap());
-    };
+    // MIDIの用意をする。
+    let output = MidiOutput::new(APPLICATION_NAME).unwrap();
 
     // マイクの設定を行う。
     let device = default_host().default_input_device().expect("No device is avaliable.");
@@ -233,14 +272,15 @@ fn main() {
         labels.push(Label::new(&ui, "　　　　　　　"));
         label_box.append(&ui, labels.last().unwrap().clone(), LayoutStrategy::Stretchy);
     };
+    label_box.append(&ui, Label::new(&ui, "　　　　　　　"), LayoutStrategy::Stretchy);
     group.set_child(&ui, label_box);
 
-    hbox.append(&ui, group, LayoutStrategy::Stretchy);
-    hbox.append(&ui, Label::new(&ui, "    "), LayoutStrategy::Compact);
+    hbox.append(&ui, group, LayoutStrategy::Compact);
+    hbox.append(&ui, Label::new(&ui, "    "), LayoutStrategy::Stretchy);
 
     // 設定用のボタン等を作る。
     let mut vbox = VerticalBox::new(&ui);
-    vbox.append(&ui, Spacer::new(&ui), LayoutStrategy::Stretchy);
+    vbox.append(&ui, Label::new(&ui, "　"), LayoutStrategy::Compact);
 
     let mut row_hbox = HorizontalBox::new(&ui);
 
@@ -268,8 +308,7 @@ fn main() {
     );
     row_hbox.append(&ui, silent_button, LayoutStrategy::Compact);
 
-    vbox.append(&ui, row_hbox, LayoutStrategy::Stretchy);
-    vbox.append(&ui, Spacer::new(&ui), LayoutStrategy::Compact);
+    vbox.append(&ui, row_hbox, LayoutStrategy::Compact);
 
     // # 最低音量入力ボックス
     let mut min_volume_entry = Spinbox::new(&ui, 0, 100);
@@ -281,9 +320,7 @@ fn main() {
             Ordering::SeqCst
         ));
     vbox.append(&ui, Label::new(&ui, "検出対象になる最低音量"), LayoutStrategy::Compact);
-    vbox.append(&ui, Spacer::new(&ui), LayoutStrategy::Compact);
     vbox.append(&ui, min_volume_entry, LayoutStrategy::Compact);
-    vbox.append(&ui, Spacer::new(&ui), LayoutStrategy::Compact);
 
     // # ポイント数
     let mut point_times = Spinbox::new(&ui, 1, u16::MAX as _);
@@ -294,14 +331,13 @@ fn main() {
             value as u16, Ordering::SeqCst
         ));
     vbox.append(&ui, Label::new(&ui, "ポイント数をデータの長さの何倍にするか"), LayoutStrategy::Compact);
-    vbox.append(&ui, Spacer::new(&ui), LayoutStrategy::Compact);
     vbox.append(&ui, point_times, LayoutStrategy::Compact);
-    vbox.append(&ui, Spacer::new(&ui), LayoutStrategy::Compact);
 
     let mut row_hbox = HorizontalBox::new(&ui);
 
     // # 調整
-    vbox.append(&ui, Label::new(&ui, "音程調整"), LayoutStrategy::Compact);
+    let mut adjustment_rate_box = VerticalBox::new(&ui);
+    adjustment_rate_box.append(&ui, Label::new(&ui, "音程調整"), LayoutStrategy::Compact);
     let mut adjustment_rate = Spinbox::new(&ui, -127, 127);
     adjustment_rate.set_value(&ui, 0);
     let cloned_shared_data = shared_data.clone();
@@ -309,18 +345,44 @@ fn main() {
         cloned_shared_data.adjustment_rate.store(
             value, Ordering::SeqCst
         ));
-    row_hbox.append(&ui, adjustment_rate, LayoutStrategy::Stretchy);
+    adjustment_rate_box.append(&ui, adjustment_rate, LayoutStrategy::Compact);
+    row_hbox.append(&ui, adjustment_rate_box, LayoutStrategy::Stretchy);
     row_hbox.append(&ui, Label::new(&ui, "　"), LayoutStrategy::Compact);
 
-    // # MIDI出力を行うかのチェックボックス
-    let mut midi_output_check = Checkbox::new(&ui, "MIDI出力");
-    if output.is_none() { midi_output_check.disable(&ui); };
-    let cloned_midi_output_check = midi_output_check.clone();
-    row_hbox.append(&ui, midi_output_check, LayoutStrategy::Compact);
+    // # MIDIの出力先の選択ボックス
+    let mut midi_output_select_box = VerticalBox::new(&ui);
+    midi_output_select_box.append(&ui, Label::new(&ui, "MIDI出力先"), LayoutStrategy::Compact);
+    let mut midi_output_select = Combobox::new(&ui);
+    midi_output_select.append(&ui, "なし");
+    let port_count = output.ports().len();
+    // MIDIの出力先をコンボボックスに追加しておく。
+    for port in output.ports().iter() {
+        midi_output_select.append(&ui, &output.port_name(port)
+            .unwrap_or("不明な出力先".to_string()));
+    };
+    // MidiManagerを用意する。
+    let mut midi_manager = MidiManager::new(output);
+    // MIDI出力先選択の設定を行う。
+    if port_count == 0 { midi_output_select_box.disable(&ui); }
+    else {
+        let cloned_port_index = midi_manager.port_index.clone();
+        midi_output_select.on_selected(&ui, move |index| {
+            let index = index as usize;
+            if index > port_count {
+                MessageDialog::new()
+                    .set_title(APPLICATION_NAME)
+                    .set_text("そのMIDIの出力先が見つかりませんでした。")
+                    .set_type(MessageType::Error)
+                    .show_alert().unwrap();
+            } else { cloned_port_index.set(index); };
+        });
+    };
+    midi_output_select.set_selected(&ui, 0);
+    midi_output_select_box.append(&ui, midi_output_select, LayoutStrategy::Compact);
+    row_hbox.append(&ui, midi_output_select_box, LayoutStrategy::Compact);
     let mut before_midi_number = Some(0);
 
     vbox.append(&ui, row_hbox, LayoutStrategy::Stretchy);
-    vbox.append(&ui, Spacer::new(&ui), LayoutStrategy::Stretchy);
 
     // 作ったボタン等をまとめる。
     hbox.append(&ui, vbox, LayoutStrategy::Compact);
@@ -329,49 +391,37 @@ fn main() {
     // ウィンドウを動かす。
     window.show(&ui);
     let mut event_loop = ui.event_loop();
-    event_loop.on_tick(&ui, {
-        let mut send_midi = |key, is_on|
-            if let Some(output) = output.as_mut() {
-                output.send(
-                    &[if is_on { NOTE_ON_MSG } else { NOTE_OFF_MSG }, key, VELOCITY]
-                ).unwrap();
-            };
+    event_loop.on_tick(&ui, move || {});
 
-            let cloned_ui = ui.clone();
-        let is_midi_on = move || cloned_midi_output_check.checked(&cloned_ui);
-
-        let duration = Duration::from_secs_f32(0.05);
-        let cloned_ui = ui.clone();
-
-        move || {
-            // マイク入力を処理するスレッドから送られてくる音程情報を処理する。
-            if let Ok(note) = rx.recv_timeout(duration) {
-                if let Some(note) = note {
-                    labels[note.0].set_text(&cloned_ui, &format!(
-                        "{}: {}", note.0 + 1, Notes::get_name(note.1 as usize)
-                    ));
-
-                    // MIDI出力が有効なら出力を行う。
-                    if note.0 != 0 || !is_midi_on() {
-                        return;
-                    };
-
-                    if let Some(before_number) = before_midi_number {
-                        send_midi(before_number, false);
-                    };
-                    send_midi(note.1, true);
-                    before_midi_number = Some(note.1);
-                } else if let Some(before_number) = before_midi_number {
-                    if is_midi_on() {
-                        // 何も音が鳴っていないのなら前ならした音を無効にする。
-                        send_midi(before_number, false);
-                        before_midi_number = None;
-                    };
-                };
-            };
-        }
-    });
+    let duration = Duration::from_secs_f32(0.05);
 
     // ウィンドウが閉じられるまではイベントループを動かし続ける。
-    while !is_closed.get() { event_loop.next_tick(&ui); };
+    while !is_closed.get() {
+        event_loop.next_tick(&ui);
+
+        // マイク入力を処理するスレッドから送られてくる音程情報を処理する。
+        if let Ok(note) = rx.recv_timeout(duration) {
+            midi_manager = midi_manager.set_midi_output();
+            if let Some(note) = note {
+                labels[note.0].set_text(&ui, &format!(
+                    "{}: {}", note.0 + 1, Notes::get_name(note.1 as usize)
+                ));
+
+                // MIDI出力が有効な場合は、出力を行う。
+                if note.0 == 0 && midi_manager.is_avaliable() {
+                    if let Some(before_number) = before_midi_number {
+                        midi_manager.send_data(before_number, false);
+                    };
+                    midi_manager.send_data(note.1, true);
+                    before_midi_number = Some(note.1);
+                } else { continue; };
+            } else if let Some(before_number) = before_midi_number {
+                if midi_manager.is_avaliable() {
+                    // 何も音が鳴っていないのなら前ならした音を無効にする。
+                    midi_manager.send_data(before_number, false);
+                    before_midi_number = None;
+                };
+            };
+        };
+    };
 }
