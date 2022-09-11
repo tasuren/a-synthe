@@ -1,5 +1,5 @@
 ========= ===========
- aSynthe   ver.0.1.1
+ aSynthe   ver.0.1.2
 ========= ===========
 
 【 ソフト名 】aSynthe
@@ -7,8 +7,8 @@
 【 開発環境 】macOS
 【 開発言語 】Rust (rustc 1.62.1)
 【 動作環境 】Windows 10 64bit / Mac (M1)
-【バージョン】0.1.1
-【最終更新日】2022/09/10
+【バージョン】0.1.2
+【最終更新日】2022/09/11
 【ファイル名】
 	【Windows】aSynthe.exe
 	【Mac】aSynthe.app
@@ -112,6 +112,8 @@ https://tasuren.github.io/aSynthe
     E-mail : tasuren@outlook.jp
 
 ◇ 履歴 ◇
+2022/09/11
+　MIDIで伸ばし音を出せないのを修正した。
 2022/09/10
 　MIDIの出力先を変更できるようにした。
 2022/09/03

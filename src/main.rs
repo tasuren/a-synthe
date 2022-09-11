@@ -414,6 +414,7 @@ fn main() {
                 // MIDI出力が有効な場合は、出力を行う。
                 if note.0 == 0 && midi_manager.is_avaliable() {
                     if let Some(before_number) = before_midi_number {
+                        if before_number == note.1 { continue; };
                         midi_manager.send_data(before_number, false);
                     };
                     midi_manager.send_data(note.1, true);
