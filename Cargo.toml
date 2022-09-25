@@ -29,7 +29,6 @@ winres = "0.1.12"
 name = "aSynthe"
 identifier = "xyz.tasuren.asynthe"
 icon = ["static/main.png"]
-version = "0.1.0"
 resources = ["static/notes.csv"]
 copyright = "(c) tasuren 2022"
 category = "public.app-category.utilities"
