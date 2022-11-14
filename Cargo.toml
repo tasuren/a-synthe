@@ -15,7 +15,7 @@ iui = { git = "https://github.com/rust-native-ui/libui-rs.git", branch = "trunk"
 ui-sys = { git = "https://github.com/rust-native-ui/libui-rs.git", branch = "trunk" }
 native-dialog = "0.6.3"
 lazy_static = "1.4.0"
-rustfft = "6.0.1"
+rustfft = "6.1.0"
 midir = "0.8.0"
 cpal = "0.14.1"
 
