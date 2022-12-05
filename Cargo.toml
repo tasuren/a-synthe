@@ -17,7 +17,7 @@ native-dialog = "0.6.3"
 lazy_static = "1.4.0"
 rustfft = "6.1.0"
 midir = "0.8.0"
-cpal = "0.14.1"
+cpal = "0.14.2"
 
 [target.'cfg(target_os="macos")'.dependencies]
 core-foundation = "0.9.3"
