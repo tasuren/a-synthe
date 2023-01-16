@@ -549,13 +549,11 @@ checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 [[package]]
 name = "iui"
 version = "0.3.0"
-source = "git+https://github.com/rust-native-ui/libui-rs.git?branch=trunk#6ff94425b341cf718e29d07067dbf82f9215a6d5"
+source = "git+https://github.com/rust-native-ui/libui-rs.git?branch=trunk#3496903ae9c4fd68731587dc11739da90a4f0e12"
 dependencies = [
  "bitflags",
  "failure",
- "lazy_static",
  "libc",
- "regex",
  "ui-sys",
 ]
 
@@ -1354,7 +1352,7 @@ dependencies = [
 [[package]]
 name = "ui-sys"
 version = "0.2.1"
-source = "git+https://github.com/rust-native-ui/libui-rs.git?branch=trunk#6ff94425b341cf718e29d07067dbf82f9215a6d5"
+source = "git+https://github.com/rust-native-ui/libui-rs.git?branch=trunk#3496903ae9c4fd68731587dc11739da90a4f0e12"
 dependencies = [
  "bindgen 0.54.0",
  "cc",
