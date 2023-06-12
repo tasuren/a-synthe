@@ -13,7 +13,7 @@ keywords = ["application", "sound"]
 [dependencies]
 iui = { git = "https://github.com/rust-native-ui/libui-rs.git", branch = "trunk" }
 ui-sys = { git = "https://github.com/rust-native-ui/libui-rs.git", branch = "trunk" }
-native-dialog = "0.6.3"
+native-dialog = "0.6.4"
 lazy_static = "1.4.0"
 rustfft = "6.1.0"
 midir = "0.9.1"
