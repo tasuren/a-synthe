@@ -1,21 +1,20 @@
 [package]
-name = "aSynthe"
-version = "0.1.2"
-authors = ["tasuren <tasuren@aol.com>"]
+name = "a_synthe"
+version = "0.2.0"
+authors = ["tasuren <tasuren@outlook.jp>"]
 edition = "2021"
 description = "音程を検出するソフトです。"
 readme = "README.md"
 license-file = "LICENSE"
-homepage = "https://tasuren.f5.si/downloads/asynthe.html"
+homepage = "https://tasuren.xyz/works/a_synthe/"
 repository = "https://github.com/tasuren/aSynthe"
 keywords = ["application", "sound"]
+rust-version = "1.69.0"
 
 [dependencies]
-iui = { git = "https://github.com/rust-native-ui/libui-rs.git", branch = "trunk" }
-ui-sys = { git = "https://github.com/rust-native-ui/libui-rs.git", branch = "trunk" }
-native-dialog = "0.6.3"
-lazy_static = "1.4.0"
-rustfft = "6.0.1"
+libui = "0.2.0"
+native-dialog = "0.6.4"
+rustfft = "6.1.0"
 midir = "0.8.0"
 cpal = "0.13.5"
 
@@ -30,12 +29,12 @@ name = "aSynthe"
 identifier = "xyz.tasuren.asynthe"
 icon = ["static/main.png"]
 version = "0.1.0"
-resources = ["static/notes.csv"]
+resources = ["src/notes.csv"]
 copyright = "(c) tasuren 2022"
 category = "public.app-category.utilities"
 short_description = "音程を検出するためのソフトです。"
 long_description = """音程を検出するためのソフトです。
-あまり使い物になるようなものではないですが、MIDI出力にも対応しています。"""
+あまり使い物になりませんが、MIDIデバイスとしても使えます。"""
 
 [package.metadata.winres]
 OriginalFilename = "aSynthe.exe"
