@@ -234,7 +234,7 @@ fn main() {
     let shared_data = synthe.shared_data.clone();
     let stream = device.build_input_stream(
         &config.into(), move |data: &[f32], _| synthe.process(data),
-        |e| println!("Error: {}", e)
+        |e| println!("Error: {}", e), None
     ).unwrap();
     stream.play().unwrap();
 
