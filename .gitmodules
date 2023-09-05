@@ -1,0 +1,3 @@
+[submodule "deps/dialog-unwrapper"]
+	path = deps/dialog-unwrapper
+	url = https://github.com/tasuren/dialog-unwrapper-rs.git

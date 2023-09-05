@@ -12,11 +12,13 @@ keywords = ["application", "sound"]
 rust-version = "1.69.0"
 
 [dependencies]
-libui = "0.2.0"
-native-dialog = "0.6.4"
 rustfft = "6.1.0"
 midir = "0.9.1"
 cpal = "0.15.2"
+libui = "0.3.0"
+# TODO: depsのdialog-unwrapperでダイアログの処理が完結する場合、これは削除する。
+native-dialog = "0.6.4"
+dialog-unwrapper = { path = "deps/dialog-unwrapper" }
 
 [target.'cfg(target_os="macos")'.dependencies]
 core-foundation = "0.9.3"
@@ -26,11 +28,10 @@ winres = "0.1.12"
 
 [package.metadata.bundle]
 name = "aSynthe"
-version = "0.1.0"
 identifier = "xyz.tasuren.asynthe"
 icon = ["static/main.png"]
 resources = ["src/notes.csv"]
-copyright = "(c) tasuren 2022"
+copyright = "(c) Takagi Tasuku 2022"
 category = "public.app-category.utilities"
 short_description = "音程を検出するためのソフトです。"
 long_description = """音程を検出するためのソフトです。
