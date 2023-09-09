@@ -1,6 +1,6 @@
 [package]
 name = "a_synthe"
-version = "0.2.0"
+version = "0.2.0-beta1"
 authors = ["tasuren <tasuren@outlook.jp>"]
 edition = "2021"
 description = "音程を検出するソフトです。"
@@ -9,29 +9,29 @@ license-file = "LICENSE"
 homepage = "https://tasuren.xyz/works/a_synthe/"
 repository = "https://github.com/tasuren/aSynthe"
 keywords = ["application", "sound"]
-rust-version = "1.69.0"
+rust-version = "1.71.0"
 
 [dependencies]
 rustfft = "6.1.0"
 midir = "0.9.1"
 cpal = "0.15.2"
 libui = "0.3.0"
-# TODO: depsのdialog-unwrapperでダイアログの処理が完結する場合、これは削除する。
-native-dialog = "0.6.4"
 dialog-unwrapper = { path = "deps/dialog-unwrapper" }
-
-[target.'cfg(target_os="macos")'.dependencies]
-core-foundation = "0.9.3"
+anyhow = "1.0.75"
 
 [target.'cfg(target_os="windows")'.build-dependencies]
-winres = "0.1.12"
+tauri-winres = "0.1.1"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
 
 [package.metadata.bundle]
 name = "aSynthe"
 identifier = "xyz.tasuren.asynthe"
-icon = ["static/main.png"]
-resources = ["src/notes.csv"]
-copyright = "(c) Takagi Tasuku 2022"
+icon = ["static/icon/main.png"]
+copyright = "(c) 2022 Takagi Tasuku"
 category = "public.app-category.utilities"
 short_description = "音程を検出するためのソフトです。"
 long_description = """音程を検出するためのソフトです。
@@ -39,4 +39,4 @@ long_description = """音程を検出するためのソフトです。
 
 [package.metadata.winres]
 OriginalFilename = "aSynthe.exe"
-LegalCopyright = "(c) tasuren 2022"
+LegalCopyright = "(c) 2022 Takagi Tasuku"

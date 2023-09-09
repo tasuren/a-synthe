@@ -1,13 +1,13 @@
 //! aSynthe - Build
 
 #[cfg(target_os="windows")]
-use winres::WindowsResource;
+use tauri_winres::WindowsResource;
 
 
 #[cfg(target_os="windows")]
 fn main() {
     let mut res = WindowsResource::new();
-    res.set_icon("static/main.ico");
+    res.set_icon("static/icon/main.ico");
     res.compile().unwrap();
 }
 

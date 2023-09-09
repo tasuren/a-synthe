@@ -1,261 +1,218 @@
 #![cfg_attr(not(test), windows_subsystem = "windows")]
 #![cfg_attr(test, windows_subsystem = "console")]
 
+use std::{sync::{Arc, mpsc::{RecvTimeoutError, channel}}, process::exit, time::Duration};
+
 use cpal::{
     default_host,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
 use midir::MidiOutput;
 
-use libui::{prelude::*, layout};
-
-mod sys;
 mod misc;
+mod ui;
+mod midi;
+mod sys;
 
+use misc::prelude::*;
+use midi::MidiManager;
+use ui::make_ui;
+use sys::{NoteContainer, Note, Synthesizer};
+
+
+/// アプリの名前
 const APPLICATION_NAME: &str = "aSynthe";
+/// 表示する音程の個数。
+const NUMBER_OF_NOTE_IN_RESULT: usize = 5;
+
+
+/// イベントループの動くスレッドに何か伝えるのに使うイベント
+pub enum BaseEvent<const NUMBER_OF_NOTE_IN_RESULT: usize> {
+    // TODO: 下記のIssueが解決次第、ここは変更を行う。
+    //   それは、Syntheに定数ジェネリクスを定め、それに`NUMBER_OF_NOTE_IN_RESULT`を設定したエイリアスをここで使うというもの。
+    //   そのIssueはこれ：https://github.com/rust-lang/rust/issues/8995
+    /// 音階の検出
+    Synthesized(Option<[Note; NUMBER_OF_NOTE_IN_RESULT]>),
+    // MIDIの出力先の変更
+    UpdateMidiOutput(usize)
+}
+pub type Event = BaseEvent<NUMBER_OF_NOTE_IN_RESULT>;
+
+
+mod logic {
+    use super::{ui::update_note_monitor, MidiManager, Note};
+
+    mod before_midi_number {
+        //! 前回MIDIで送信した数値を記録するためのモジュールです。
+
+        use std::sync::atomic::{AtomicU8, AtomicBool, Ordering::SeqCst};
+
+        static BEFORE_MIDI_NUMBER: AtomicU8 = AtomicU8::new(0);
+        static BEFORE_MIDI_NUMBER_IS_FRESH: AtomicBool = AtomicBool::new(false);
+
+        pub(super) fn get() -> Option<u8> {
+            if BEFORE_MIDI_NUMBER_IS_FRESH.load(SeqCst) {
+                Some(BEFORE_MIDI_NUMBER.load(SeqCst))
+            } else { None }
+        }
+
+        pub(super) fn set(number: Option<u8>) {
+            if let Some(number) = number {
+                BEFORE_MIDI_NUMBER.store(number, SeqCst);
+                BEFORE_MIDI_NUMBER_IS_FRESH.store(true, SeqCst);
+            } else {
+                BEFORE_MIDI_NUMBER_IS_FRESH.store(false, SeqCst);
+            }
+        }
+    }
+
+    /// 検出した音階をもとにMIDIの送信を行います。
+    fn consume_midi_number(manager: &mut MidiManager, number: u8) {
+        // MIDIの出力
+        if !manager.is_avaliable() { return; };
+
+        if let Some(before_midi_number) = before_midi_number::get() {
+            if before_midi_number == number {
+                // もし前回と同じ音が出ているのなら、音程を変えない。
+                return;
+            };
+
+            // 前と同じじゃない音が出ているのなら、MIDIを止める。
+            manager.down_midi(before_midi_number);
+        };
+
+        manager.up_midi(number);
+        before_midi_number::set(Some(number));
+    }
+
+    /// 検出した音階を使って搭載している機能の諸々の処理をします。
+    pub fn consume_notes<const N: usize>(
+        midi_manager: &mut MidiManager,
+        note_labels: &mut [libui::controls::Label; N],
+        notes: Option<[Note; N]>
+    ) {
+        if let Some(notes) = notes {
+            let first_midi_number = notes[0].0;
+            update_note_monitor::<N>(note_labels, notes);
+            consume_midi_number(midi_manager, first_midi_number);
+        } else if let Some(before_midi_number) = before_midi_number::get() {
+            midi_manager.down_midi(before_midi_number);
+            before_midi_number::set(None);
+        };
+    }
+}
+
+
+const CPU_SLEEP_INTERVAL: Duration = Duration::from_millis(5);
+
 
 /// メインプログラムです。
 fn main() {
     println!("{} by tasuren\nNow loading...", APPLICATION_NAME);
 
-    // 別スレッドとの通信用のチャンネルを作る。
-    let (tx, rx) = std::sync::mpsc::channel();
-
     // MIDIの用意をする。
-    let output = MidiOutput::new(APPLICATION_NAME).unwrap();
+    let midi_output = MidiOutput::new(APPLICATION_NAME)
+        .context("MIDI出力の準備に失敗しました。")
+        .unwrap_or_dialog_with_title(errors::INIT_ERROR);
 
     // マイクの設定を行う。
-    let device = default_host()
+    let input_device = default_host()
         .default_input_device()
-        .expect("有効なデバイスがありません。");
-    let config = device
+        .context("有効なデバイスがありません。")
+        .unwrap_or_dialog_with_title(errors::INIT_ERROR);
+    let input_device_config = input_device
         .default_input_config()
-        .expect("有効なデバイスの設定がありません。");
-    let mut synthe = Synthe::new(
-        Notes::new(format!("{}src/notes.csv", get_base())),
-        tx,
-        config.sample_rate().0 as f32,
+        .context("有効なデバイスの設定がありません。")
+        .unwrap_or_dialog_with_title(errors::INIT_ERROR);
+
+    // シンセの用意
+    let mut synthesizer = Synthesizer::new(
+        NoteContainer::new(),
+        input_device_config.sample_rate().0 as _,
     );
-    let shared_data = synthe.shared_data.clone();
-    let stream = device
+    let config = Arc::clone(&synthesizer.config);
+
+    // 録音および高速フーリエ変換の結果の送信を開始
+    let (input_tx, input_rx) = channel();
+
+    let input_stream = input_device
         .build_input_stream(
-            &config.into(),
-            move |data: &[f32], _| synthe.process(data),
-            |e| println!("Error: {}", e),
+            &input_device_config.into(),
+            {
+                let input_tx = input_tx.clone();
+                move |data: &[f32], _| {
+                    let _ = input_tx.send(Some(data.to_vec()));
+                }
+            },
+            |e| {
+                Some(e).context("デバイスとの通信が異常終了しました。").unwrap_or_dialog();
+                exit(3);
+            },
             None,
         )
         .unwrap();
-    stream.play().unwrap();
+    input_stream.play().unwrap();
 
-    let ui = UI::init().expect("Couldn't initialize UI library.");
-    let is_closed = Rc::new(Cell::new(false));
 
-    // メニューを作る。
-    let menu = Menu::new("メニュー");
-    let info_item = menu.append_item("情報");
-    info_item.on_clicked(|_, _| {
-        MessageDialog::new()
-            .set_type(MessageType::Info)
-            .set_title("情報")
-            .set_text(&format!(
-            "aSynthe v{}\n(c) 2022 tasuren\n\nリポジトリ：https://github.com/tasuren/aSynthe\n{}",
-            env!("CARGO_PKG_VERSION"), "ライセンス情報：https://tasuren.github.io/aSynthe"
-        ))
-            .show_alert()
-            .unwrap()
-    });
-    menu.append_separator();
-    let quit_item = menu.append_item("終了");
-    let cloned_is_closed = is_closed.clone();
-    quit_item.on_clicked(move |_, _| cloned_is_closed.set(true));
-
-    // ウィンドウを作る。
-    let mut window = Window::new(&ui, APPLICATION_NAME, 300, 200, WindowType::NoMenubar);
-    let mut hbox = HorizontalBox::new();
-
-    let cloned_is_closed = is_closed.clone();
-    window.on_closing(&ui, move |_| cloned_is_closed.set(true));
-
-    // 結果表示用のラベルを作る。
-    let mut group = Group::new("Note");
-    let mut label_box = VerticalBox::new();
-    let mut labels = Vec::new();
-    for _ in 0..RESULT_RANGE {
-        // ここでスペースを使うのは、音程の文字列の長さの最大までGroupを引き伸ばすため。
-        // じゃないと起動時にGroupが伸びることになる。
-        labels.push(Label::new("　　　　　　　"));
-        label_box.append(labels.last().unwrap().clone(), LayoutStrategy::Stretchy);
-    }
-    label_box.append(Label::new("　　　　　　　"), LayoutStrategy::Stretchy);
-    group.set_child(label_box);
-
-    hbox.append(group, LayoutStrategy::Compact);
-    hbox.append(Label::new("    "), LayoutStrategy::Stretchy);
-
-    // 設定用のボタン等を作る。
-    let mut vbox = VerticalBox::new();
-    vbox.append(Label::new("　"), LayoutStrategy::Compact);
-
-    let mut row_hbox = HorizontalBox::new();
-
-    // 窓関数を使うかどうかのチェックボックス
-    let mut use_window_check = Checkbox::new("窓関数を使う");
-    use_window_check.set_checked(false);
-    let cloned_shared_data = shared_data.clone();
-    use_window_check.on_toggled(&ui, move |value| {
-        cloned_shared_data
-            .use_window_flag
-            .store(value, Ordering::SeqCst)
-    });
-    row_hbox.append(use_window_check, LayoutStrategy::Compact);
-    row_hbox.append(Label::new("　"), LayoutStrategy::Stretchy);
-
-    // 無音データを設定するボタン
-    let mut silent_button = Button::new(DEFAULT_SILENT_BUTTON_TEXT);
-    let cloned_shared_data = shared_data.clone();
-    silent_button.on_clicked(move |_button| {
-        if &_button.text() == DEFAULT_SILENT_BUTTON_TEXT {
-            cloned_shared_data.use_silent.store(true, Ordering::SeqCst);
-            _button.set_text("無音データを消す");
-        } else {
-            cloned_shared_data.use_silent.store(false, Ordering::SeqCst);
-            _button.set_text(DEFAULT_SILENT_BUTTON_TEXT);
-        }
-    });
-    row_hbox.append(silent_button, LayoutStrategy::Compact);
-
-    vbox.append(row_hbox, LayoutStrategy::Compact);
-
-    // 最低音量入力ボックス
-    let mut min_volume_entry = Spinbox::new(0, 100);
-    min_volume_entry.set_value(62);
-    let cloned_shared_data = shared_data.clone();
-    min_volume_entry.on_changed(move |value| {
-        cloned_shared_data
-            .min_volume
-            .store((value as f32 / 100.0 * 80.0 - 80.0) as _, Ordering::SeqCst)
-    });
-    vbox.append(
-        Label::new("検出対象になる最低音量"),
-        LayoutStrategy::Compact,
+    let (tx, rx) = channel();
+    let (ui, mut window, mut note_labels) = make_ui(
+        tx.clone(),
+        config,
+        midi_output
+            .ports().iter()
+            .map(
+                |p| midi_output
+                    .port_name(p)
+                    .unwrap_or_else(|_| "不明な出力先".to_string())
+            )
     );
-    vbox.append(min_volume_entry, LayoutStrategy::Compact);
 
-    // ポイント数
-    let mut point_times = Spinbox::new(1, u16::MAX as _);
-    point_times.set_value(9);
-    let cloned_shared_data = shared_data.clone();
-    point_times.on_changed(move |value| {
-        cloned_shared_data
-            .point_times
-            .store(value as u16, Ordering::SeqCst)
-    });
-    vbox.append(
-        Label::new("ポイント数をデータの長さの何倍にするか"),
-        LayoutStrategy::Compact,
-    );
-    vbox.append(point_times, LayoutStrategy::Compact);
 
-    let mut row_hbox = HorizontalBox::new();
+    let mut midi_manager = MidiManager::new(midi_output);
 
-    // 調整
-    let mut adjustment_rate_box = VerticalBox::new();
-    adjustment_rate_box.append(Label::new("音程調整"), LayoutStrategy::Compact);
-    let mut adjustment_rate = Spinbox::new(-127, 127);
-    adjustment_rate.set_value(0);
-    let cloned_shared_data = shared_data.clone();
-    adjustment_rate.on_changed(move |value| {
-        cloned_shared_data
-            .adjustment_rate
-            .store(value, Ordering::SeqCst)
-    });
-    adjustment_rate_box.append(adjustment_rate, LayoutStrategy::Compact);
-    row_hbox.append(adjustment_rate_box, LayoutStrategy::Compact);
-    row_hbox.append(Label::new("　"), LayoutStrategy::Stretchy);
 
-    // MIDIの出力先の選択ボックス
-    let mut midi_output_select_box = VerticalBox::new();
-    midi_output_select_box.append(Label::new("MIDI出力先"), LayoutStrategy::Compact);
-    let mut midi_output_select = Combobox::new();
-    midi_output_select.append("なし");
-    let port_count = output.ports().len();
-    // MIDIの出力先をコンボボックスに追加しておく。
-    for port in output.ports().iter() {
-        midi_output_select.append(&output.port_name(port).unwrap_or("不明な出力先".to_string()));
-    }
-    // MidiManagerを用意する。
-    let mut midi_manager = MidiManager::new(output);
-    // MIDI出力先選択の設定を行う。
-    if port_count == 0 {
-        midi_output_select_box.disable();
-    } else {
-        let cloned_port_index = midi_manager.port_index.clone();
-        midi_output_select.on_selected(&ui, move |index| {
-            let index = index as usize;
-            if index > port_count {
-                MessageDialog::new()
-                    .set_title(APPLICATION_NAME)
-                    .set_text("そのMIDIの出力先が見つかりませんでした。")
-                    .set_type(MessageType::Error)
-                    .show_alert()
-                    .unwrap();
-            } else {
-                cloned_port_index.set(index);
-            };
-        });
-    };
-    midi_output_select.set_selected(0);
-    midi_output_select_box.append(midi_output_select, LayoutStrategy::Compact);
-    row_hbox.append(midi_output_select_box, LayoutStrategy::Compact);
-    let mut before_midi_number = Some(0);
-
-    vbox.append(row_hbox, LayoutStrategy::Compact);
-
-    // 作ったボタン等をまとめる。
-    hbox.append(vbox, LayoutStrategy::Compact);
-    window.set_child(hbox);
-
-    // ウィンドウを動かす。
-    window.show();
-    let mut event_loop = ui.event_loop();
-    event_loop.on_tick(move || {});
-
-    let duration = Duration::from_secs_f32(0.05);
-
-    // ウィンドウが閉じられるまではイベントループを動かし続ける。
-    while !is_closed.get() {
-        event_loop.next_tick();
-
-        // マイク入力を処理するスレッドから送られてくる音程情報を処理する。
-        if let Ok(note) = rx.recv_timeout(duration) {
-            midi_manager = midi_manager.set_midi_output();
-            if let Some(note) = note {
-                labels[note.0].set_text(&format!(
-                    "{}: {}",
-                    note.0 + 1,
-                    Notes::get_name(note.1 as usize)
-                ));
-
-                // MIDI出力が有効な場合は、出力を行う。
-                if note.0 == 0 && midi_manager.is_avaliable() {
-                    if let Some(before_number) = before_midi_number {
-                        if before_number == note.1 {
-                            continue;
-                        };
-                        midi_manager.send_data(before_number, false);
-                    };
-                    midi_manager.send_data(note.1, true);
-                    before_midi_number = Some(note.1);
-                } else {
+    // 計算用のスレッドの用意
+    let calculation_thread_handle = std::thread::spawn(move || {
+        loop {
+            match input_rx.recv_timeout(CPU_SLEEP_INTERVAL) {
+                Ok(maybe_data)
+                => if let Some(data) = maybe_data {
+                    let _ = tx.send(Event::Synthesized(synthesizer.synthe(&data)));
                     continue;
-                };
-            } else if let Some(before_number) = before_midi_number {
-                if midi_manager.is_avaliable() {
-                    // 何も音が鳴っていないのなら前ならした音を無効にする。
-                    midi_manager.send_data(before_number, false);
-                    before_midi_number = None;
-                };
+                } else { break; },
+                Err(e) => match e {
+                    RecvTimeoutError::Disconnected => break,
+                    RecvTimeoutError::Timeout => continue
+                }
             };
         };
-    }
+    });
+
+
+    // ウィンドウの表示およびイベントループの開始
+    window.show();
+    let mut event_loop = ui.event_loop();
+
+
+    while event_loop.next_tick() {
+        if let Ok(event) = rx.recv_timeout(CPU_SLEEP_INTERVAL) {
+            match event {
+                Event::Synthesized(notes) => logic::consume_notes(
+                    &mut midi_manager,
+                    &mut note_labels,
+                    notes
+                ),
+                Event::UpdateMidiOutput(port_index)
+                => midi_manager = midi_manager.set_midi_output(port_index)
+            };
+        };
+    };
+
+
+    // 計算用スレッドに終わりを通告する。
+    input_tx.send(None).unwrap();
+
+
+    // 計算スレッドの終了待機
+    calculation_thread_handle.join().unwrap();
 }

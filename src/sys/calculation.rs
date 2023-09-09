@@ -3,13 +3,33 @@ use rustfft::{
     FftPlanner,
 };
 
-/// 窓関数の実装です。
+
+/// ハン窓の実装です。
 pub fn window(data: Vec<f32>) -> Vec<f32> {
-    let ln = data.len() as f32 - 1.0;
+    let len = data.len() as f32 - 1.;
+    // NOTE: 参考文献：https://cognicull.com/ja/7r5k6y75
     data.into_iter()
         .enumerate()
-        .map(|(i, x)| x * (1.0 / 2.0 * (1.0 - ComplexFloat::cos((2.0 * 3.141592 * i as f32) / ln))))
+        .map(|(i, x)| x * (
+            0.5 * (1. - ComplexFloat::cos(
+                (2. * std::f32::consts::PI * i as f32) / len
+            ))
+        ))
         .collect::<Vec<f32>>()
+}
+
+/// 騒音レベルを取得します。
+pub fn get_dba(data: &[f32]) -> f32 {
+    // NOTE: 参考になると思うページは以下。
+    //   - 要約
+    //     - 前提として二乗平均平方根（RMS）：https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q1446027909
+    //     - http://hsp.tv/play/pforum.php?mode=pastwch&num=47066
+    //   - デシベルについて
+    //     - https://mathwords.net/decibel
+    //     - 詳細：https://ja.wikipedia.org/wiki/%E3%83%87%E3%82%B7%E3%83%99%E3%83%AB
+    20. * (data.iter().map(|x| x.powi(2)).sum::<f32>() / data.len() as f32)
+        .sqrt()
+        .log10()
 }
 
 /// FFTの計算を行います。
@@ -20,9 +40,10 @@ pub fn process_fft(
     frame_rate: f32,
     use_window: bool,
 ) -> (f32, Vec<f32>) {
+    // NOTE: 窓関数を使う理由に関してはここが参考になると思う：https://www.logical-arts.jp/archives/124
     let mut buffer = if use_window { window(data) } else { data }
         .iter()
-        .map(|x| Complex { re: *x, im: 0.0 })
+        .map(|x| Complex { re: *x, im: 0. }) // NOTE: 虚部は現実世界で認識できないため0。
         .collect::<Vec<Complex<f32>>>();
     let data_length = buffer.len();
 
