@@ -1,30 +1,20 @@
-use std::sync::{Arc, mpsc::Sender, atomic::Ordering::SeqCst};
+use std::sync::{atomic::Ordering::SeqCst, mpsc::Sender, Arc};
 
-use libui::{layout, menu, prelude::*, controls::*};
 use dialog_unwrapper::rfd::{AsyncMessageDialog, MessageLevel};
+use libui::{controls::*, layout, menu, prelude::*};
 
-use crate::misc::{prelude::*, app_meta};
-
+use crate::misc::{app_meta, prelude::*};
 
 mod texts {
     pub(super) const SET_SILENT_DATA: &str = "無音データを設定する";
 }
 
-
 /// 音階モニタの更新を行う。
-pub fn update_note_monitor<const N: usize>(
-    labels: &mut [Label; N], notes: [crate::sys::Note; N]
-) {
+pub fn update_note_monitor<const N: usize>(labels: &mut [Label; N], notes: [crate::sys::Note; N]) {
     for (i, note) in notes.into_iter().enumerate() {
-        labels[i].set_text(
-            &format!(
-                "{}: {}", i + 1,
-                note.get_name()
-            )
-        )
-    };
+        labels[i].set_text(&format!("{}: {}", i + 1, note.get_name()))
+    }
 }
-
 
 pub fn make_ui<const NUMBER_OF_NOTE_IN_RESULT: usize>(
     event_sender: Sender<crate::Event>,
@@ -48,14 +38,14 @@ pub fn make_ui<const NUMBER_OF_NOTE_IN_RESULT: usize>(
             Compact: let wrapped_control_box = VerticalBox(padded: true) {
                 Stretchy: let top_spacer = Spacer()
                 Compact: let control_box = HorizontalBox(padded: true) {
-                    Compact: let first_control_box = VerticalBox(padded: true) {
+                    Stretchy: let first_control_box = VerticalBox(padded: true) {
                         Compact: let window_check_box = Checkbox("窓関数（ハン窓）を使う", checked: false)
                         Compact: let min_detection_volume_label = Label("検出対象とする最低音量")
                         Compact: let min_detection_volume_spin_box = Spinbox(0, 100)
                         Compact: let pitch_control_label = Label("音程調節")
                         Compact: let pitch_control_spin_box = Spinbox(-127, 127)
                     }
-                    Compact: let second_control_box = VerticalBox(padded: true) {
+                    Stretchy: let second_control_box = VerticalBox(padded: true) {
                         Compact: let silent_data_button = Button(texts::SET_SILENT_DATA)
                         Compact: let point_length_size_label = Label("ポイント数の規模")
                         Compact: let point_length_size_spin_box = Spinbox(1, u16::MAX as _)
@@ -84,9 +74,7 @@ pub fn make_ui<const NUMBER_OF_NOTE_IN_RESULT: usize>(
     // 窓関数
     window_check_box.on_toggled(&ui, {
         let config = Arc::clone(&config);
-        move |value| config
-            .use_window_flag
-            .store(value, SeqCst)
+        move |value| config.use_window_flag.store(value, SeqCst)
     });
 
     // 最低音量
@@ -96,10 +84,7 @@ pub fn make_ui<const NUMBER_OF_NOTE_IN_RESULT: usize>(
         move |value| {
             config
                 .min_volume
-                .store(
-                    ((value as f32 / 100. - 1.) * 80.) as _,
-                    SeqCst
-                )
+                .store(((value as f32 / 100. - 1.) * 80.) as _, SeqCst)
         }
     });
 
@@ -107,11 +92,7 @@ pub fn make_ui<const NUMBER_OF_NOTE_IN_RESULT: usize>(
     pitch_control_spin_box.set_value(0);
     pitch_control_spin_box.on_changed({
         let config = Arc::clone(&config);
-        move |value| {
-            config
-                .adjustment_rate
-                .store(value, SeqCst)
-        }
+        move |value| config.adjustment_rate.store(value, SeqCst)
     });
 
     // - 二列目
@@ -134,11 +115,7 @@ pub fn make_ui<const NUMBER_OF_NOTE_IN_RESULT: usize>(
     point_length_size_spin_box.set_value(9);
     point_length_size_spin_box.on_changed({
         let config = Arc::clone(&config);
-        move |value| {
-            config
-                .point_times
-                .store(value as _, SeqCst)
-        }
+        move |value| config.point_times.store(value as _, SeqCst)
     });
 
     // MIDIの出力先
@@ -153,18 +130,20 @@ pub fn make_ui<const NUMBER_OF_NOTE_IN_RESULT: usize>(
         midi_output_combo_box.disable();
     };
 
-    midi_output_combo_box.clone().on_selected(&ui, move |index| {
-        let index = index as usize;
-        if index > midi_output_combo_box.count() as _ {
-            let _ = AsyncMessageDialog::new()
-                .set_title(crate::APPLICATION_NAME)
-                .set_description("そのMIDIの出力先が見つかりませんでした。")
-                .set_level(MessageLevel::Error)
-                .show();
-        } else {
-            let _ = event_sender.send(crate::Event::UpdateMidiOutput(index as _));
-        }
-    });
+    midi_output_combo_box
+        .clone()
+        .on_selected(&ui, move |index| {
+            let index = index as usize;
+            if index > midi_output_combo_box.count() as _ {
+                let _ = AsyncMessageDialog::new()
+                    .set_title(crate::APPLICATION_NAME)
+                    .set_description("そのMIDIの出力先が見つかりませんでした。")
+                    .set_level(MessageLevel::Error)
+                    .show();
+            } else {
+                let _ = event_sender.send(crate::Event::UpdateMidiOutput(index as _));
+            }
+        });
 
     /* ここからウィンドウ自体に関する設定 */
 
@@ -185,9 +164,14 @@ pub fn make_ui<const NUMBER_OF_NOTE_IN_RESULT: usize>(
     about_menu_item.on_clicked(|_, _| app_meta::show_about());
 
     // ウィンドウを作る。
-    let mut window = Window::new(&ui, crate::APPLICATION_NAME, 300, 200, WindowType::NoMenubar);
+    let mut window = Window::new(
+        &ui,
+        crate::APPLICATION_NAME,
+        300,
+        200,
+        WindowType::NoMenubar,
+    );
     window.set_child(layout);
-
 
     (ui, window, note_labels)
 }

@@ -15,6 +15,7 @@ rust-version = "1.71.0"
 rustfft = "6.1.0"
 midir = "0.9.1"
 cpal = "0.15.2"
+arc-swap = "1.6.0"
 libui = "0.3.0"
 dialog-unwrapper = { path = "deps/dialog-unwrapper" }
 anyhow = "1.0.75"

@@ -21,6 +21,3 @@ pub mod app_meta {
             .show();
     }
 }
-
-
-

@@ -16,9 +16,7 @@ impl NoteContainer {
         for line in include_str!("notes.csv").lines() {
             row = line.split_whitespace();
             notes.numbers.push(row.next().unwrap().parse().unwrap());
-            notes
-                .frequencies
-                .push(row.next().unwrap().parse().unwrap());
+            notes.frequencies.push(row.next().unwrap().parse().unwrap());
             notes
                 .before_frequencies
                 .push(row.next().unwrap().parse().unwrap());

@@ -1,7 +1,13 @@
 #![cfg_attr(not(test), windows_subsystem = "windows")]
 #![cfg_attr(test, windows_subsystem = "console")]
 
-use std::{sync::{Arc, mpsc::{RecvTimeoutError, channel}}, process::exit, time::Duration};
+use std::{
+    sync::{
+        mpsc::{channel, RecvTimeoutError},
+        Arc,
+    },
+    time::Duration,
+};
 
 use cpal::{
     default_host,
@@ -9,22 +15,20 @@ use cpal::{
 };
 use midir::MidiOutput;
 
-mod misc;
-mod ui;
 mod midi;
+mod misc;
 mod sys;
+mod ui;
 
-use misc::prelude::*;
 use midi::MidiManager;
+use misc::prelude::*;
+use sys::{Note, NoteContainer, Synthesizer};
 use ui::make_ui;
-use sys::{NoteContainer, Note, Synthesizer};
-
 
 /// アプリの名前
 const APPLICATION_NAME: &str = "aSynthe";
 /// 表示する音程の個数。
 const NUMBER_OF_NOTE_IN_RESULT: usize = 5;
-
 
 /// イベントループの動くスレッドに何か伝えるのに使うイベント
 pub enum BaseEvent<const NUMBER_OF_NOTE_IN_RESULT: usize> {
@@ -34,10 +38,9 @@ pub enum BaseEvent<const NUMBER_OF_NOTE_IN_RESULT: usize> {
     /// 音階の検出
     Synthesized(Option<[Note; NUMBER_OF_NOTE_IN_RESULT]>),
     // MIDIの出力先の変更
-    UpdateMidiOutput(usize)
+    UpdateMidiOutput(usize),
 }
 pub type Event = BaseEvent<NUMBER_OF_NOTE_IN_RESULT>;
-
 
 mod logic {
     use super::{ui::update_note_monitor, MidiManager, Note};
@@ -45,7 +48,7 @@ mod logic {
     mod before_midi_number {
         //! 前回MIDIで送信した数値を記録するためのモジュールです。
 
-        use std::sync::atomic::{AtomicU8, AtomicBool, Ordering::SeqCst};
+        use std::sync::atomic::{AtomicBool, AtomicU8, Ordering::SeqCst};
 
         static BEFORE_MIDI_NUMBER: AtomicU8 = AtomicU8::new(0);
         static BEFORE_MIDI_NUMBER_IS_FRESH: AtomicBool = AtomicBool::new(false);
@@ -53,7 +56,9 @@ mod logic {
         pub(super) fn get() -> Option<u8> {
             if BEFORE_MIDI_NUMBER_IS_FRESH.load(SeqCst) {
                 Some(BEFORE_MIDI_NUMBER.load(SeqCst))
-            } else { None }
+            } else {
+                None
+            }
         }
 
         pub(super) fn set(number: Option<u8>) {
@@ -68,8 +73,9 @@ mod logic {
 
     /// 検出した音階をもとにMIDIの送信を行います。
     fn consume_midi_number(manager: &mut MidiManager, number: u8) {
-        // MIDIの出力
-        if !manager.is_avaliable() { return; };
+        if !manager.is_avaliable() {
+            return;
+        };
 
         if let Some(before_midi_number) = before_midi_number::get() {
             if before_midi_number == number {
@@ -77,10 +83,11 @@ mod logic {
                 return;
             };
 
-            // 前と同じじゃない音が出ているのなら、MIDIを止める。
+            // 前と同じじゃない音が出ているのなら、音を止める。
             manager.down_midi(before_midi_number);
         };
 
+        // 音を出す。
         manager.up_midi(number);
         before_midi_number::set(Some(number));
     }
@@ -89,7 +96,7 @@ mod logic {
     pub fn consume_notes<const N: usize>(
         midi_manager: &mut MidiManager,
         note_labels: &mut [libui::controls::Label; N],
-        notes: Option<[Note; N]>
+        notes: Option<[Note; N]>,
     ) {
         if let Some(notes) = notes {
             let first_midi_number = notes[0].0;
@@ -102,9 +109,7 @@ mod logic {
     }
 }
 
-
 const CPU_SLEEP_INTERVAL: Duration = Duration::from_millis(5);
-
 
 /// メインプログラムです。
 fn main() {
@@ -141,77 +146,69 @@ fn main() {
             {
                 let input_tx = input_tx.clone();
                 move |data: &[f32], _| {
-                    let _ = input_tx.send(Some(data.to_vec()));
+                    let _ = input_tx.send(Some(Arc::from(data)));
                 }
             },
             |e| {
-                Some(e).context("デバイスとの通信が異常終了しました。").unwrap_or_dialog();
-                exit(3);
+                Some(e)
+                    .context("デバイスとの通信が異常終了しました。")
+                    .unwrap_or_dialog();
             },
             None,
         )
         .unwrap();
     input_stream.play().unwrap();
 
-
     let (tx, rx) = channel();
     let (ui, mut window, mut note_labels) = make_ui(
         tx.clone(),
         config,
-        midi_output
-            .ports().iter()
-            .map(
-                |p| midi_output
-                    .port_name(p)
-                    .unwrap_or_else(|_| "不明な出力先".to_string())
-            )
+        midi_output.ports().iter().map(|p| {
+            midi_output
+                .port_name(p)
+                .unwrap_or_else(|_| "不明な出力先".to_string())
+        }),
     );
-
 
     let mut midi_manager = MidiManager::new(midi_output);
 
-
     // 計算用のスレッドの用意
-    let calculation_thread_handle = std::thread::spawn(move || {
-        loop {
-            match input_rx.recv_timeout(CPU_SLEEP_INTERVAL) {
-                Ok(maybe_data)
-                => if let Some(data) = maybe_data {
-                    let _ = tx.send(Event::Synthesized(synthesizer.synthe(&data)));
+    let calculation_thread_handle = std::thread::spawn(move || loop {
+        match input_rx.recv_timeout(CPU_SLEEP_INTERVAL) {
+            Ok(maybe_data) => {
+                if let Some(data) = maybe_data {
+                    let _ = tx.send(Event::Synthesized(synthesizer.synthe(data)));
                     continue;
-                } else { break; },
-                Err(e) => match e {
-                    RecvTimeoutError::Disconnected => break,
-                    RecvTimeoutError::Timeout => continue
+                } else {
+                    break;
                 }
-            };
+            }
+            Err(e) => match e {
+                RecvTimeoutError::Disconnected => break,
+                RecvTimeoutError::Timeout => continue,
+            },
         };
     });
-
 
     // ウィンドウの表示およびイベントループの開始
     window.show();
     let mut event_loop = ui.event_loop();
 
-
     while event_loop.next_tick() {
         if let Ok(event) = rx.recv_timeout(CPU_SLEEP_INTERVAL) {
             match event {
-                Event::Synthesized(notes) => logic::consume_notes(
-                    &mut midi_manager,
-                    &mut note_labels,
-                    notes
-                ),
-                Event::UpdateMidiOutput(port_index)
-                => midi_manager = midi_manager.set_midi_output(port_index)
+                Event::Synthesized(notes) => {
+                    logic::consume_notes(&mut midi_manager, &mut note_labels, notes)
+                }
+                Event::UpdateMidiOutput(port_index) => {
+                    midi_manager = midi_manager.set_midi_output(port_index)
+                }
             };
         };
-    };
-
+    }
 
     // 計算用スレッドに終わりを通告する。
     input_tx.send(None).unwrap();
-
 
     // 計算スレッドの終了待機
     calculation_thread_handle.join().unwrap();

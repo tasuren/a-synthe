@@ -1,12 +1,10 @@
-use std::{rc::Rc, cell::Cell};
+use std::{cell::Cell, rc::Rc};
 
 use midir::{MidiOutput, MidiOutputConnection};
-
 
 const NOTE_ON_MSG: u8 = 0x90;
 const NOTE_OFF_MSG: u8 = 0x80;
 const VELOCITY: u8 = 0x64;
-
 
 /// MIDIを管理するための構造体です。
 pub struct MidiManager {
@@ -22,11 +20,7 @@ impl MidiManager {
 
         Self {
             connection: if midi_output.ports().len() > 0 {
-                Some(
-                    midi_output
-                        .connect(port, crate::APPLICATION_NAME)
-                        .unwrap(),
-                )
+                Some(midi_output.connect(port, crate::APPLICATION_NAME).unwrap())
             } else {
                 None
             },
