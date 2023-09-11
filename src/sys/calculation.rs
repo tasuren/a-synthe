@@ -37,7 +37,7 @@ pub fn get_dba(data: &[f32]) -> f32 {
 }
 
 pub mod fft {
-    use std::sync::{Arc, Mutex};
+    use std::sync::Mutex;
 
     use rustfft::{
         num_complex::{Complex32, ComplexFloat},
@@ -64,12 +64,13 @@ pub mod fft {
     ///     返り値の解像度の計算に使われます。
     /// - `point_times`: 計算結果の規模を何倍にするか
     ///     これをするとバッファが自動で音声データの長さをこの数値で乗算した数の長さまで拡張され、そのサイズ分のフーリエ変換を行います。
-    ///     つまり、フーリエ変換の精度が上がります。
+    ///     つまり、フーリエ変換の精度が上がります。（その分、処理が大変になります。）
+    ///     NOTE: 詳細は次のページをご確認ください：https://www.logical-arts.jp/archives/112
     /// - `result_buffer`: 計算結果を代入するバッファ
     ///     NOTE: 自動でリサイズされるので、あらかじめ大きい数を割り当てるといったことはしなくても良いです。
     #[inline(always)]
     pub fn process(
-        data: Arc<[f32]>,
+        data: &[f32],
         frame_rate: f32,
         point_times: usize,
         result_buffer: &mut Vec<f32>,

@@ -26,6 +26,11 @@ pub fn make_ui<const NUMBER_OF_NOTE_IN_RESULT: usize>(
         .context("UIの初期化に失敗しました。")
         .unwrap_or_dialog_with_title(errors::INIT_ERROR);
 
+    ui.on_should_quit({
+        let ui = ui.clone();
+        move || ui.quit()
+    });
+
     // レイアウトの作成
     layout! { &ui,
         let layout = HorizontalBox(padded: true) {
@@ -42,7 +47,7 @@ pub fn make_ui<const NUMBER_OF_NOTE_IN_RESULT: usize>(
                         Compact: let window_check_box = Checkbox("窓関数（ハン窓）を使う", checked: false)
                         Compact: let min_detection_volume_label = Label("検出対象とする最低音量")
                         Compact: let min_detection_volume_spin_box = Spinbox(0, 100)
-                        Compact: let pitch_control_label = Label("音程調節")
+                        Compact: let pitch_control_label = Label("音階調節")
                         Compact: let pitch_control_spin_box = Spinbox(-127, 127)
                     }
                     Stretchy: let second_control_box = VerticalBox(padded: true) {
@@ -88,7 +93,7 @@ pub fn make_ui<const NUMBER_OF_NOTE_IN_RESULT: usize>(
         }
     });
 
-    // 音程調節
+    // 音階調節
     pitch_control_spin_box.set_value(0);
     pitch_control_spin_box.on_changed({
         let config = Arc::clone(&config);
@@ -169,7 +174,7 @@ pub fn make_ui<const NUMBER_OF_NOTE_IN_RESULT: usize>(
         crate::APPLICATION_NAME,
         300,
         200,
-        WindowType::NoMenubar,
+        WindowType::HasMenubar,
     );
     window.set_child(layout);
 

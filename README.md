@@ -1,4 +1,4 @@
-これは、マイクに入った音声から音程を検出するソフトです。  
+これは、マイクに入った音声から音階を検出するソフトです。  
 WindowsとMac（ARM）に現在対応しているつもりです。  
 あまり使えるものではありませんが、MIDIデバイスとして使うことができます。  
 なお、GitHubのReleasesの欄からダウンロードが可能です。
@@ -9,7 +9,7 @@ WindowsとMac（ARM）に現在対応しているつもりです。
 ## Screenshot
 <img width="455" alt="screenshot" src="https://user-images.githubusercontent.com/45121209/188258254-a734da9b-8597-4956-a373-c845ee48119a.png">
 
-## Release Build
+## Build
 ### Windows
 1. `cargo build --release`でビルドする。
 2. staticフォルダ
@@ -19,12 +19,8 @@ WindowsとMac（ARM）に現在対応しているつもりです。
 3. 以下のコードをビルドされたappの`info.plist`の`dict`キー内に追記します。
 
 ```xml
-<key>NSMicrophoneUsageDescription</key>
-<string>音程検出のための音声拾いのため。</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>音階検出のための。</string>
 ```
 ### ライセンス情報
 [ここ](https://tasuren.github.io/a_synthe/licenses.html)にまとめてあります。  
-なお、そのページは以下のコマンドでリポジトリにて生成できます。（`cargo-about`を使用します。）
-```shell
-$ cargo about generate about.hbs > docs/licenses.html
-```

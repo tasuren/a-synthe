@@ -1,4 +1,5 @@
 accepted = [
+    "Apache-2.0 WITH LLVM-exception",
     "Apache-2.0",
     "MIT",
     "BSD-4-Clause",

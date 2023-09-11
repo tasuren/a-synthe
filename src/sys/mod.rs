@@ -37,7 +37,7 @@ impl Ord for RawNote {
     }
 }
 
-/// 音程を検出するためのものを実装した構造体
+/// 音階を検出するためのものを実装した構造体
 pub struct Synthesizer {
     notes: NoteContainer,
     frame_rate: f32,
@@ -66,17 +66,21 @@ impl Synthesizer {
         }
     }
 
-    /// 音程検出の処理を行います。
+    /// 音階検出の処理を行います。
     #[inline]
-    pub fn synthe<const N: usize>(&mut self, data: Arc<[f32]>) -> Option<[Note; N]> {
+    pub fn synthe<const N: usize>(&mut self, data: &[f32]) -> Option<[Note; N]> {
         if calculation::get_dba(&data) as i32 <= self.config.min_volume.load(SeqCst) {
             return None;
         };
 
         // FFTで周波数の計算をする。
+        let a;
         let info = calculation::fft::process(
             if self.config.use_window_flag.load(SeqCst) {
-                calculation::han_window(data)
+                // NOTE: 窓関数を使う理由は次のウェブページが参考になると思います。
+                //   https://www.logical-arts.jp/archives/124
+                a = calculation::han_window(Arc::from(data));
+                &a
             } else {
                 data
             },
@@ -108,7 +112,7 @@ impl Synthesizer {
             self.silence = None;
         };
 
-        // 一番音量が高い周波数の音程を探す。
+        // 一番音量が高い周波数の音階を探す。
         self.detected_raw_notes.clear();
         let (mut stack, mut value);
 
@@ -133,7 +137,7 @@ impl Synthesizer {
             };
         }
 
-        // メインスレッドに検出した音程を送信する。
+        // メインスレッドに検出した音階を送信する。
         let adjustment_rate = self.config.adjustment_rate.load(SeqCst);
         let mut result = [Note::NULL; N];
         let mut value;

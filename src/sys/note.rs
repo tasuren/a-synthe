@@ -1,4 +1,4 @@
-/// 音程と音程に対応する周波数を格納するための構造体です。
+/// 音階と音階に対応する周波数を格納するための構造体です。
 #[derive(Default)]
 pub struct NoteContainer {
     pub numbers: Vec<u8>,
@@ -8,7 +8,7 @@ pub struct NoteContainer {
 }
 
 impl NoteContainer {
-    /// 音程等が書き込まれたファイルから音程等を読み込みます。
+    /// 音階等が書き込まれたファイルから音階等を読み込みます。
     pub fn new() -> Self {
         let mut notes = Self::default();
         let mut row;
@@ -29,7 +29,7 @@ impl NoteContainer {
     }
 }
 
-/// 音程情報を入れるための構造体です。
+/// 音階情報を入れるための構造体です。
 #[derive(Clone)]
 pub struct Note(pub u8);
 impl Note {

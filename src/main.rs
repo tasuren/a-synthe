@@ -2,10 +2,7 @@
 #![cfg_attr(test, windows_subsystem = "console")]
 
 use std::{
-    sync::{
-        mpsc::{channel, RecvTimeoutError},
-        Arc,
-    },
+    sync::{mpsc::channel, Arc},
     time::Duration,
 };
 
@@ -27,7 +24,7 @@ use ui::make_ui;
 
 /// アプリの名前
 const APPLICATION_NAME: &str = "aSynthe";
-/// 表示する音程の個数。
+/// 表示する音階の個数。
 const NUMBER_OF_NOTE_IN_RESULT: usize = 5;
 
 /// イベントループの動くスレッドに何か伝えるのに使うイベント
@@ -79,7 +76,7 @@ mod logic {
 
         if let Some(before_midi_number) = before_midi_number::get() {
             if before_midi_number == number {
-                // もし前回と同じ音が出ているのなら、音程を変えない。
+                // もし前回と同じ音が出ているのなら、音階を変えない。
                 return;
             };
 
@@ -138,15 +135,15 @@ fn main() {
     let config = Arc::clone(&synthesizer.config);
 
     // 録音および高速フーリエ変換の結果の送信を開始
-    let (input_tx, input_rx) = channel();
+    let (tx, rx) = channel();
 
     let input_stream = input_device
         .build_input_stream(
             &input_device_config.into(),
             {
-                let input_tx = input_tx.clone();
+                let tx = tx.clone();
                 move |data: &[f32], _| {
-                    let _ = input_tx.send(Some(Arc::from(data)));
+                    let _ = tx.send(Event::Synthesized(synthesizer.synthe(data)));
                 }
             },
             |e| {
@@ -159,9 +156,8 @@ fn main() {
         .unwrap();
     input_stream.play().unwrap();
 
-    let (tx, rx) = channel();
     let (ui, mut window, mut note_labels) = make_ui(
-        tx.clone(),
+        tx,
         config,
         midi_output.ports().iter().map(|p| {
             midi_output
@@ -172,27 +168,10 @@ fn main() {
 
     let mut midi_manager = MidiManager::new(midi_output);
 
-    // 計算用のスレッドの用意
-    let calculation_thread_handle = std::thread::spawn(move || loop {
-        match input_rx.recv_timeout(CPU_SLEEP_INTERVAL) {
-            Ok(maybe_data) => {
-                if let Some(data) = maybe_data {
-                    let _ = tx.send(Event::Synthesized(synthesizer.synthe(data)));
-                    continue;
-                } else {
-                    break;
-                }
-            }
-            Err(e) => match e {
-                RecvTimeoutError::Disconnected => break,
-                RecvTimeoutError::Timeout => continue,
-            },
-        };
-    });
-
     // ウィンドウの表示およびイベントループの開始
     window.show();
     let mut event_loop = ui.event_loop();
+    println!("Started");
 
     while event_loop.next_tick() {
         if let Ok(event) = rx.recv_timeout(CPU_SLEEP_INTERVAL) {
@@ -206,10 +185,4 @@ fn main() {
             };
         };
     }
-
-    // 計算用スレッドに終わりを通告する。
-    input_tx.send(None).unwrap();
-
-    // 計算スレッドの終了待機
-    calculation_thread_handle.join().unwrap();
 }

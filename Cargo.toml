@@ -1,24 +1,22 @@
 [package]
 name = "a_synthe"
-version = "0.2.0-beta1"
-authors = ["tasuren <tasuren@outlook.jp>"]
+version = "0.2.0"
+authors = ["Takagi Tasuku <tasuren@outlook.jp>"]
 edition = "2021"
-description = "音程を検出するソフトです。"
+description = "音階を検出するソフトです。簡易MIDI機能出力機能付き。"
 readme = "README.md"
 license-file = "LICENSE"
-homepage = "https://tasuren.xyz/works/a_synthe/"
-repository = "https://github.com/tasuren/aSynthe"
-keywords = ["application", "sound"]
+homepage = "https://tasuren.jp/works/a_synthe/"
+repository = "https://github.com/tasuren/a-synthe"
+keywords = ["application", "sound", "pitch"]
 rust-version = "1.71.0"
 
 [dependencies]
 rustfft = "6.1.0"
 midir = "0.9.1"
 cpal = "0.15.2"
-arc-swap = "1.6.0"
 libui = "0.3.0"
 dialog-unwrapper = { path = "deps/dialog-unwrapper" }
-anyhow = "1.0.75"
 
 [target.'cfg(target_os="windows")'.build-dependencies]
 tauri-winres = "0.1.1"
@@ -27,17 +25,16 @@ tauri-winres = "0.1.1"
 lto = true
 codegen-units = 1
 strip = true
+panic = "abort"
 
 [package.metadata.bundle]
 name = "aSynthe"
-identifier = "xyz.tasuren.asynthe"
+identifier = "jp.tasuren.asynthe"
 icon = ["static/icon/main.png"]
 copyright = "(c) 2022 Takagi Tasuku"
 category = "public.app-category.utilities"
-short_description = "音程を検出するためのソフトです。"
-long_description = """音程を検出するためのソフトです。
-あまり使い物になりませんが、MIDIデバイスとしても使えます。"""
+long_description = "音階を検出してためのソフトで、簡易的なMIDI出力機能を持っています。"
 
-[package.metadata.winres]
+[package.metadata.tauri-winres]
 OriginalFilename = "aSynthe.exe"
 LegalCopyright = "(c) 2022 Takagi Tasuku"
