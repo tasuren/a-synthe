@@ -1,3 +1,10 @@
+# Project
 /target
+
+# User
 .DS_Store
-*.*-*
+
+## Editor
+*.code-workspace
+*.sublime-workspace
+*.sublime-project
