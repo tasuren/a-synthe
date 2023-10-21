@@ -1,10 +1,10 @@
-![GitHub all releases](https://img.shields.io/github/downloads/tasuren/a-synthe/total) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/tasuren/a-synthe)
+![GitHub all releases](https://img.shields.io/github/downloads/tasuren/a-synthe/total)
 # aSynthe
 これは、マイクに入った音声から音程を割り出すソフトで、WindowsとMacに現在対応しているつもりです。  
 あまり使えるものではありませんが、MIDIデバイスとして使うことができます。
 
 **WARNING**  
-まだ、モノラルのマイクしか対応していません。
+まだ、モノラルのマイクしか対応していません。Linuxは動作未確認です。
 
 ## スクリーンショット
 <img width="634" alt="aSyntheがレ/D(5)を示す様子" src="https://github.com/tasuren/a-synthe/assets/45121209/b65278fe-ec1e-4133-a7a1-6b95b708349a">
