@@ -6,7 +6,7 @@ use tauri_winres::WindowsResource;
 #[cfg(target_os = "windows")]
 fn main() {
     let mut res = WindowsResource::new();
-    res.set_icon("static/icon/main.ico");
+    res.set_icon("release/icon/main.ico");
     res.compile().unwrap();
 }
 

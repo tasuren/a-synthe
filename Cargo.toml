@@ -30,7 +30,7 @@ panic = "abort"
 [package.metadata.bundle]
 name = "aSynthe"
 identifier = "jp.tasuren.a-synthe"
-icon = ["static/icon/main.png"]
+icon = ["release/icon/main.png"]
 copyright = "(c) 2022 Takagi Tasuku"
 category = "public.app-category.utilities"
 long_description = "音階を検出してためのソフトで、簡易的なMIDI出力機能を持っています。"
