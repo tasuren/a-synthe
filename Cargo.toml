@@ -1,6 +1,6 @@
 [package]
 name = "a_synthe"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Takagi Tasuku <tasuren@outlook.jp>"]
 edition = "2021"
 description = "音階を検出するソフトです。簡易MIDI機能出力機能付き。"
