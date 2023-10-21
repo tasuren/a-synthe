@@ -1,0 +1,80 @@
+name: Release
+on:
+  push:
+    branches: [main]
+
+env:
+  WINDOWS_EXECUTABLE_NAME: a_synthe.exe
+  MACOS_EXECUTABLE_NAME: aSynthe.app
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        target:
+          - x86_64-pc-windows-msvc
+          - x86_64-apple-darwin
+        include:
+          - target_without_arch: pc-windows-msvc
+            os: windows-latest
+          - target_without_arch: apple-darwin
+            os: macos-latest
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Show rustc versions
+        run: rustc --version
+
+      - name: Install aarch64 target
+        run: rustup target install aarch64-${{ matrix.target_without_arch }}
+
+      - name: Build on Windows
+        shell: pwsh
+        run: |
+          echo "Building for x86_64..."
+          cargo build --release
+          echo "Building for aarch64..."
+          cargo build --release --target aarch64-${{ matrix.target_without_arch }}
+
+          echo "Creating bundle..."
+          mkdir bundle assets
+
+          Copy-Item -Path "target/release/${WINDOWS_EXECUTABLE_NAME}" -Destination bundle
+          Copy-Item -Path release/readme.txt -Destination bundle
+          Compress-Archive -Path bundle -DestinationPath assets/${{ matrix.target }}.zip
+
+          Copy-Item -Path "target/aarch64-${{ matrix.target_without_arch }}/release/${WINDOWS_EXECUTABLE_NAME}" -Destination bundle
+          Compress-Archive -Path bundle -DestinationPath assets/aarch64-${{ matrix.target_without_arch }}.zip
+        if: ${{ matrix.os }} == "windows-latest"
+      - name: Build on macOS
+        run: |
+          echo "Building for x86_64..."
+          cargo bundle --release
+          echo "Building for aarch64..."
+          cargo bundle --release --target aarch64-${{ matrix.target_without_arch }}
+
+          echo "Creating bundle..."
+          mkdir bundle assets
+
+          cp -r target/release/bundle/osx/$MACOS_EXECUTABLE_NAME bundle
+          cp release/readme.txt bundle
+          gzip -c bundle > assets/${{ matrix.target }}.zip
+
+          cp -r target/aarch64-apple-darwin/release/bundle/osx/$MACOS_EXECUTABLE_NAME bundle
+          gzip -c bundle > assets/aarch64-${{ matrix.target_without_arch }}.zip
+        if: ${{ matrix.os }} == "macos-latest"
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            assets/${{ matrix.target }}.zip
+            assets/aarch64-${{ matrix.target_without_arch }}.zip
