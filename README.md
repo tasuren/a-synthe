@@ -20,12 +20,11 @@
 ```shell
 $ cargo build --release
 ```
-### Mac
+### macOS
 1. `cargo install cargo-bundle`を実行してcargo-bundleをインストール
 2. `cargo bundle --release`を実行
 3. 以下のコードをビルドされたアプリの`info.plist`にて、`dict`キー内に以下を追記
-
-```xml
-  <key>NSMicrophoneUsageDescription</key>
-  <string>音階検出のための。</string>
-```
+  ```xml
+    <key>NSMicrophoneUsageDescription</key>
+    <string>音階検出のため</string>
+  ```
