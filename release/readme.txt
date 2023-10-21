@@ -7,10 +7,10 @@
 【 開発環境 】macOS
 【 開発言語 】Rust (rustc 1.71.0)
 【 動作環境 】Windows 10 64bit / macOS (ARM)
-【バージョン】0.2.0
-【最終更新日】2023/09/10
+【バージョン】0.2.1
+【最終更新日】2023/10/21
 【実行ファイル】
-	【Windows】aSynthe.exe
+	【Windows】a_synthe.exe
 	【Mac】aSynthe.app
 【リポジトリ】https://github.com/tasuren/a-synthe
 
